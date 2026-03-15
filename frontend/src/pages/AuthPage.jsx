@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
 import toast, { Toaster } from 'react-hot-toast';
 
-const FEATURES = [
-  { icon: '🌍', text: '100+ languages supported' },
-  { icon: '🧠', text: 'Cross-language vector memory' },
-  { icon: '⚡', text: 'Powered by Llama 3.3 70B' },
-  { icon: '🔒', text: 'JWT secured & BCrypt hashed' },
+const BOOT_LINES = [
+  '> initializing langbot_v2...',
+  '> loading language models... [OK]',
+  '> connecting to groq api... [OK]',
+  '> vector memory online... [OK]',
+  '> 100+ languages supported... [OK]',
+  '> system ready.',
 ];
 
 export default function AuthPage() {
@@ -25,143 +27,148 @@ export default function AuthPage() {
     try {
       if (tab === 'login') {
         await login(form.username, form.password);
-        toast.success('Welcome back!');
+        toast.success('// access granted');
       } else {
         await register(form.username, form.email, form.password);
-        toast.success('Account created!');
+        toast.success('// account created');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
+      toast.error('// ' + (err.response?.data?.message || 'access denied'));
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen bg-surface-950 flex">
+    <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', fontFamily: "'JetBrains Mono', monospace" }}>
       <Toaster position="top-center" toastOptions={{
-        style: { background: '#18181b', color: '#fafafa', border: '1px solid #27272a', fontSize: 14 }
+        style: { background: '#0c0c0c', color: '#00ff88', border: '1px solid #00ff8833', fontSize: 13, fontFamily: 'JetBrains Mono' }
       }} />
 
-      {/* Left panel */}
-      <div className="hidden lg:flex flex-col justify-between w-[480px] bg-surface-900 border-r border-surface-800 p-12">
-        <div>
-          <div className="flex items-center gap-3 mb-16">
-            <span className="text-3xl">🌍</span>
-            <span className="text-xl font-bold text-surface-50">LangBot</span>
+      {/* Left terminal panel */}
+      <div style={{ width: 420, background: '#080808', borderRight: '1px solid #1a1a1a', padding: '48px 40px', display: 'flex', flexDirection: 'column', gap: 0 }} className="hidden lg:flex">
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 11, color: '#333', marginBottom: 8 }}>langbot_v2.0 // multilingual ai</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#7b2fff', letterSpacing: -1 }} className="animate-flicker">
+            LANG<span style={{ color: '#00ff88' }}>BOT</span>
           </div>
-          <h1 className="text-4xl font-bold text-surface-50 leading-tight mb-4">
-            Chat in any<br />
-            <span className="gradient-text">language.</span>
-          </h1>
-          <p className="text-surface-400 text-lg leading-relaxed mb-12">
-            The AI assistant that understands you — no matter what language you speak in.
-          </p>
-          <div className="space-y-4">
-            {FEATURES.map((f, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 + 0.3 }}
-                className="flex items-center gap-3 text-surface-300">
-                <span className="text-xl w-8">{f.icon}</span>
-                <span className="text-sm font-medium">{f.text}</span>
-              </motion.div>
-            ))}
-          </div>
+          <div style={{ fontSize: 11, color: '#333', marginTop: 4 }}>_terminal interface</div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {['🇬🇧','🇫🇷','🇪🇸','🇩🇪','🇯🇵','🇸🇦','🇨🇳','🇮🇳','🇧🇷','🇷🇺','🇰🇷','🇮🇹'].map((f, i) => (
-            <span key={i} className="text-2xl">{f}</span>
+
+        <div style={{ flex: 1 }}>
+          {BOOT_LINES.map((line, i) => (
+            <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.15 }}
+              style={{ fontSize: 12, color: i === BOOT_LINES.length - 1 ? '#00ff88' : '#333', marginBottom: 6, fontFamily: 'JetBrains Mono' }}>
+              {line}
+            </motion.div>
           ))}
-          <span className="text-surface-500 text-sm self-center ml-1">+90 more</span>
+          <div style={{ marginTop: 8, fontSize: 12, color: '#00ff88' }} className="terminal-cursor" />
+        </div>
+
+        <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: 24, marginTop: 24 }}>
+          <div style={{ fontSize: 11, color: '#222', marginBottom: 12 }}>// supported languages</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {['EN','HI','FR','ES','DE','JA','ZH','AR','PT','RU','KO','IT'].map(l => (
+              <span key={l} style={{ fontSize: 10, color: '#333', border: '1px solid #1a1a1a', padding: '2px 6px', borderRadius: 3 }}>{l}</span>
+            ))}
+            <span style={{ fontSize: 10, color: '#7b2fff', border: '1px solid #7b2fff33', padding: '2px 6px', borderRadius: 3 }}>+90</span>
+          </div>
         </div>
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      {/* Right auth panel */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-[400px]">
+          style={{ width: '100%', maxWidth: 380 }}>
 
-          {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <span className="text-2xl">🌍</span>
-            <span className="text-lg font-bold">LangBot</span>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ fontSize: 11, color: '#333', marginBottom: 8 }}>
+              {tab === 'login' ? '// authenticate user' : '// register new user'}
+            </div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e0e0e0', margin: 0 }}>
+              {tab === 'login' ? 'sign_in()' : 'create_account()'}
+            </h1>
           </div>
 
-          <h2 className="text-2xl font-bold text-surface-50 mb-1">
-            {tab === 'login' ? 'Welcome back' : 'Create account'}
-          </h2>
-          <p className="text-surface-500 text-sm mb-8">
-            {tab === 'login' ? 'Sign in to continue chatting' : 'Start chatting in any language'}
-          </p>
-
           {/* Tabs */}
-          <div className="flex gap-1 bg-surface-900 border border-surface-800 p-1 rounded-lg mb-6">
+          <div style={{ display: 'flex', gap: 0, marginBottom: 28, borderBottom: '1px solid #1a1a1a' }}>
             {['login', 'register'].map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all duration-150 ${
-                  tab === t ? 'bg-surface-700 text-surface-50' : 'text-surface-500 hover:text-surface-300'
-                }`}>
-                {t === 'login' ? 'Sign In' : 'Register'}
+              <button key={t} onClick={() => setTab(t)} style={{
+                flex: 1, padding: '8px 0', fontSize: 12, fontFamily: 'JetBrains Mono',
+                background: 'transparent', border: 'none', borderBottom: tab === t ? '2px solid #7b2fff' : '2px solid transparent',
+                color: tab === t ? '#7b2fff' : '#444', cursor: 'pointer', transition: 'all 0.15s',
+                marginBottom: -1
+              }}>
+                {t === 'login' ? '.login' : '.register'}
               </button>
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <label className="text-xs font-semibold text-surface-400 uppercase tracking-wide mb-1.5 block">
-                Username
-              </label>
-              <input name="username" type="text" placeholder="yourname"
-                value={form.username} onChange={handleChange} required
-                className="input-field" />
+              <div style={{ fontSize: 10, color: '#444', marginBottom: 6 }}>const username =</div>
+              <input name="username" type="text" placeholder='"yourname"'
+                value={form.username} onChange={handleChange} required className="input-field" />
             </div>
 
             <AnimatePresence>
               {tab === 'register' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}>
-                  <label className="text-xs font-semibold text-surface-400 uppercase tracking-wide mb-1.5 block">
-                    Email
-                  </label>
-                  <input name="email" type="email" placeholder="you@example.com"
-                    value={form.email} onChange={handleChange} required
-                    className="input-field" />
+                  <div style={{ fontSize: 10, color: '#444', marginBottom: 6 }}>const email =</div>
+                  <input name="email" type="email" placeholder='"you@example.com"'
+                    value={form.email} onChange={handleChange} required className="input-field" />
                 </motion.div>
               )}
             </AnimatePresence>
 
             <div>
-              <label className="text-xs font-semibold text-surface-400 uppercase tracking-wide mb-1.5 block">
-                Password
-              </label>
-              <div className="relative">
+              <div style={{ fontSize: 10, color: '#444', marginBottom: 6 }}>const password =</div>
+              <div style={{ position: 'relative' }}>
                 <input name="password" type={showPass ? 'text' : 'password'}
-                  placeholder="Min 8 characters" value={form.password}
+                  placeholder='"min 8 chars"' value={form.password}
                   onChange={handleChange} required minLength={8}
-                  className="input-field pr-12" />
-                <button type="button" onClick={() => setShowPass(p => !p)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-300 transition-colors text-lg">
-                  {showPass ? '🙈' : '👁️'}
+                  className="input-field" style={{ paddingRight: 40 }} />
+                <button type="button" onClick={() => setShowPass(p => !p)} style={{
+                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', color: '#444', cursor: 'pointer', fontSize: 12,
+                  fontFamily: 'JetBrains Mono'
+                }}>
+                  {showPass ? '[hide]' : '[show]'}
                 </button>
               </div>
             </div>
 
             <motion.button type="submit" disabled={loading}
-              whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-              className="btn-primary w-full mt-2 flex items-center justify-center gap-2 h-11">
+              whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+              style={{
+                marginTop: 8, padding: '12px', fontSize: 13, fontFamily: 'JetBrains Mono',
+                background: loading ? '#7b2fff11' : '#7b2fff',
+                border: '1px solid #7b2fff',
+                color: loading ? '#7b2fff' : '#000',
+                borderRadius: 4, cursor: loading ? 'wait' : 'pointer',
+                fontWeight: 600, transition: 'all 0.15s', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', gap: 8
+              }}>
               {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <>
+                  <div style={{ width: 12, height: 12, border: '2px solid #7b2fff44', borderTop: '2px solid #7b2fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  processing...
+                </>
               ) : (
-                <>{tab === 'login' ? '→ Sign In' : '✨ Create Account'}</>
+                tab === 'login' ? '> execute login()' : '> execute register()'
               )}
             </motion.button>
           </form>
 
-          <p className="text-center text-surface-600 text-xs mt-6">
-            By continuing, you agree to our terms of service
-          </p>
+          <div style={{ marginTop: 24, fontSize: 10, color: '#222', textAlign: 'center' }}>
+            // langbot_v2 · powered by llama 3.3 70b · zero cost
+          </div>
         </motion.div>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

@@ -13,17 +13,17 @@ const LANG_FLAGS = {
 
 const EXAMPLES = ['Hello! What can you do?','Bonjour!','こんにちは!','مرحبا!','नमस्ते!','Hola!'];
 
+const mono = "'JetBrains Mono', monospace";
+
 function TypingIndicator() {
   return (
-    <div className="flex items-end gap-2 animate-fade-in">
-      <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-xs flex-shrink-0">🤖</div>
-      <div className="card px-4 py-3">
-        <div className="flex gap-1 items-center h-4">
-          {[0,1,2].map(i => (
-            <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-surface-500"
-              animate={{ y:[0,-4,0] }} transition={{ repeat:Infinity, duration:0.6, delay:i*0.15 }} />
-          ))}
-        </div>
+    <div style={{ display:'flex', alignItems:'flex-end', gap:8 }} className="animate-scan-in">
+      <div style={{ width:24, height:24, borderRadius:3, border:'1px solid #00ff8844', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'#00ff88', fontFamily:mono }}>AI</div>
+      <div style={{ background:'#0c0c0c', border:'1px solid #00ff8822', borderRadius:'0 6px 6px 6px', padding:'10px 14px', display:'flex', gap:4 }}>
+        {[0,1,2].map(i => (
+          <motion.div key={i} style={{ width:6, height:6, borderRadius:'50%', background:'#00ff88' }}
+            animate={{ opacity:[0.2,1,0.2] }} transition={{ repeat:Infinity, duration:0.8, delay:i*0.2 }} />
+        ))}
       </div>
     </div>
   );
@@ -32,23 +32,27 @@ function TypingIndicator() {
 function Message({ msg }) {
   const isUser = msg.role === 'USER';
   return (
-    <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.2 }}
-      className={`flex items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+    <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.15 }}
+      style={{ display:'flex', flexDirection: isUser ? 'row-reverse' : 'row', alignItems:'flex-end', gap:8 }}>
       {!isUser && (
-        <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-xs flex-shrink-0 mb-0.5">🤖</div>
+        <div style={{ width:24, height:24, borderRadius:3, border:'1px solid #00ff8844', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'#00ff88', fontFamily:mono, flexShrink:0 }}>AI</div>
       )}
-      <div className={`max-w-[65%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
-        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-          isUser
-            ? 'bg-brand-600 text-white rounded-br-sm'
-            : 'card text-surface-100 rounded-bl-sm'
-        }`}>
+      <div style={{ maxWidth:'65%', display:'flex', flexDirection:'column', gap:4, alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+        {!isUser && <div style={{ fontSize:10, color:'#333', fontFamily:mono }}>// langbot response</div>}
+        {isUser && <div style={{ fontSize:10, color:'#7b2fff88', fontFamily:mono }}>// user input</div>}
+        <div style={{
+          padding:'10px 14px', fontSize:13, lineHeight:1.6, whiteSpace:'pre-wrap', fontFamily:mono,
+          background: isUser ? '#7b2fff' : '#0c0c0c',
+          border: isUser ? '1px solid #7b2fff' : '1px solid #00ff8822',
+          borderRadius: isUser ? '6px 6px 0 6px' : '0 6px 6px 6px',
+          color: isUser ? '#000' : '#ccc',
+        }}>
           {msg.content}
         </div>
         {msg.language && (
-          <span className="text-xs text-surface-600 px-1">
-            {LANG_FLAGS[msg.language] || '🌐'} {msg.language}
-          </span>
+          <div style={{ fontSize:10, color:'#333', fontFamily:mono }}>
+            {LANG_FLAGS[msg.language] || '🌐'} lang::{msg.language}
+          </div>
         )}
       </div>
     </motion.div>
@@ -66,27 +70,21 @@ export default function ChatPage() {
   const [meta, setMeta] = useState(null);
   const [listening, setListening] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [search, setSearch] = useState('');
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
-  const textareaRef = useRef(null);
 
   useEffect(() => { loadConversations(); }, []);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
   async function loadConversations() {
-    try {
-      const res = await chatApi.getConversations();
-      setConversations(res.data);
-    } catch {}
+    try { const r = await chatApi.getConversations(); setConversations(r.data); } catch {}
   }
 
   async function loadConversation(id) {
     try {
-      const res = await chatApi.getConversation(id);
-      setActiveConvId(id);
-      setMessages(res.data.messages);
-      setMeta(null);
+      const r = await chatApi.getConversation(id);
+      setActiveConvId(id); setMessages(r.data.messages); setMeta(null);
     } catch {}
   }
 
@@ -94,187 +92,192 @@ export default function ChatPage() {
     if (!input.trim() || loading) return;
     const text = input.trim();
     setInput('');
-    const tempId = 'temp-' + Date.now();
-    setMessages(p => [...p, { id:tempId, role:'USER', content:text }]);
+    const tid = 'tmp-' + Date.now();
+    setMessages(p => [...p, { id:tid, role:'USER', content:text }]);
     setLoading(true);
     try {
-      const res = await chatApi.sendMessage(text, activeConvId);
-      const { conversationId, responseText, detectedLanguage, detectedIntent, memoriesUsed } = res.data;
+      const r = await chatApi.sendMessage(text, activeConvId);
+      const { conversationId, responseText, detectedLanguage, detectedIntent, memoriesUsed } = r.data;
       setActiveConvId(conversationId);
       setMessages(p => [
-        ...p.filter(m => m.id !== tempId),
-        { id:'u-'+Date.now(), role:'USER', content:text, language:detectedLanguage },
-        { id:'b-'+Date.now(), role:'ASSISTANT', content:responseText, language:detectedLanguage },
+        ...p.filter(m => m.id !== tid),
+        { id:'u'+Date.now(), role:'USER', content:text, language:detectedLanguage },
+        { id:'b'+Date.now(), role:'ASSISTANT', content:responseText, language:detectedLanguage },
       ]);
       setMeta({ detectedLanguage, detectedIntent, memoriesUsed });
       loadConversations();
     } catch {
-      setMessages(p => p.filter(m => m.id !== tempId));
-      toast.error('Failed to send');
+      setMessages(p => p.filter(m => m.id !== tid));
+      toast.error('// transmission failed');
     } finally { setLoading(false); }
   }
 
   function startListening() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { toast.error('Use Chrome for voice input'); return; }
+    if (!SR) { toast.error('// use chrome for voice'); return; }
     const r = new SR();
-    r.continuous = false;
-    r.interimResults = true;
+    r.continuous = false; r.interimResults = true;
     r.onstart = () => setListening(true);
     r.onresult = e => setInput(Array.from(e.results).map(r => r[0].transcript).join(''));
     r.onend = () => setListening(false);
-    r.onerror = () => { setListening(false); toast.error('Voice error'); };
-    recognitionRef.current = r;
-    r.start();
+    r.onerror = () => { setListening(false); toast.error('// voice error'); };
+    recognitionRef.current = r; r.start();
   }
 
   function stopListening() { recognitionRef.current?.stop(); setListening(false); }
 
-  function newChat() { setActiveConvId(null); setMessages([]); setMeta(null); }
-
-  async function deleteConversation(e, id) {
+  async function deleteConv(e, id) {
     e.stopPropagation();
     try {
       await chatApi.deleteConversation(id);
       setConversations(p => p.filter(c => c.id !== id));
-      if (activeConvId === id) newChat();
-      toast.success('Deleted');
-    } catch { toast.error('Failed to delete'); }
+      if (activeConvId === id) { setActiveConvId(null); setMessages([]); setMeta(null); }
+      toast.success('// deleted');
+    } catch { toast.error('// delete failed'); }
   }
 
-  const filteredConvs = conversations.filter(c =>
-    c.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = conversations.filter(c => c.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="flex h-screen bg-surface-950 text-surface-100 overflow-hidden">
+    <div style={{ display:'flex', height:'100vh', background:'#080808', fontFamily:mono, color:'#e0e0e0', overflow:'hidden' }}>
       <Toaster position="top-center" toastOptions={{
-        style: { background:'#18181b', color:'#fafafa', border:'1px solid #27272a', fontSize:14 }
+        style: { background:'#0c0c0c', color:'#00ff88', border:'1px solid #00ff8833', fontSize:12, fontFamily:mono }
       }} />
 
       {/* Sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
-          <motion.aside initial={{ x:-280, opacity:0 }} animate={{ x:0, opacity:1 }}
-            exit={{ x:-280, opacity:0 }} transition={{ type:'spring', damping:25, stiffness:200 }}
-            className="w-64 flex-shrink-0 bg-surface-900 border-r border-surface-800 flex flex-col">
+          <motion.div initial={{ x:-260 }} animate={{ x:0 }} exit={{ x:-260 }}
+            transition={{ type:'spring', damping:25, stiffness:200 }}
+            style={{ width:240, background:'#080808', borderRight:'1px solid #1a1a1a', display:'flex', flexDirection:'column', flexShrink:0 }}>
 
-            {/* Sidebar header */}
-            <div className="p-4 border-b border-surface-800">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">🌍</span>
-                  <span className="font-bold text-surface-50">LangBot</span>
+            {/* Header */}
+            <div style={{ padding:'16px 14px', borderBottom:'1px solid #1a1a1a' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:700, color:'#7b2fff', letterSpacing:1 }}>
+                    LANG<span style={{ color:'#00ff88' }}>BOT</span>
+                  </div>
+                  <div style={{ fontSize:9, color:'#333', marginTop:1 }}>_v2.0 // online</div>
                 </div>
-                <button onClick={() => setSidebarOpen(false)} className="btn-ghost p-1.5 text-surface-500">✕</button>
+                <button onClick={() => setSidebarOpen(false)} style={{ background:'none', border:'none', color:'#333', cursor:'pointer', fontSize:14, fontFamily:mono }}>✕</button>
               </div>
-              <button onClick={newChat}
-                className="btn-primary w-full flex items-center justify-center gap-2 text-sm h-9">
-                <span>+</span> New Chat
+              <button onClick={() => { setActiveConvId(null); setMessages([]); setMeta(null); }}
+                style={{ width:'100%', padding:'8px', fontSize:11, fontFamily:mono, background:'transparent', border:'1px solid #7b2fff44', color:'#7b2fff', borderRadius:3, cursor:'pointer', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.target.style.background='#7b2fff22'; e.target.style.borderColor='#7b2fff'; }}
+                onMouseLeave={e => { e.target.style.background='transparent'; e.target.style.borderColor='#7b2fff44'; }}>
+                + new_chat()
               </button>
             </div>
 
             {/* Search */}
-            <div className="px-3 py-2">
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search conversations..." className="input-field text-xs py-2" />
+            <div style={{ padding:'8px 10px', borderBottom:'1px solid #111' }}>
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="// search..." className="input-field" style={{ fontSize:11, padding:'6px 10px' }} />
             </div>
 
             {/* Conversations */}
-            <div className="flex-1 overflow-y-auto px-2 py-1">
-              {filteredConvs.length === 0 && (
-                <p className="text-center text-surface-600 text-xs mt-8">No conversations yet</p>
+            <div style={{ flex:1, overflowY:'auto', padding:'6px' }}>
+              {filtered.length === 0 && (
+                <div style={{ textAlign:'center', color:'#222', fontSize:11, marginTop:20 }}>// no sessions</div>
               )}
-              <AnimatePresence>
-                {filteredConvs.map(conv => (
-                  <motion.div key={conv.id} initial={{ opacity:0 }} animate={{ opacity:1 }}
-                    className="group relative">
-                    <button onClick={() => loadConversation(conv.id)}
-                      className={`sidebar-item w-full py-2.5 ${conv.id === activeConvId ? 'sidebar-item-active' : ''}`}>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{conv.title}</p>
-                        <p className="text-xs text-surface-600 mt-0.5">
-                          {new Date(conv.updatedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </button>
-                    <button onClick={e => deleteConversation(e, conv.id)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-surface-600 hover:text-red-400 transition-all text-xs p-1">
-                      🗑
-                    </button>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+              {filtered.map(conv => (
+                <div key={conv.id} style={{ position:'relative' }}
+                  onMouseEnter={e => e.currentTarget.querySelector('.del-btn').style.opacity='1'}
+                  onMouseLeave={e => e.currentTarget.querySelector('.del-btn').style.opacity='0'}>
+                  <button onClick={() => loadConversation(conv.id)}
+                    className={`sidebar-item ${conv.id === activeConvId ? 'sidebar-item-active' : ''}`}
+                    style={{ width:'100%', paddingRight:28 }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:11, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{conv.title}</div>
+                      <div style={{ fontSize:9, color:'#222', marginTop:1 }}>{new Date(conv.updatedAt).toLocaleDateString()}</div>
+                    </div>
+                  </button>
+                  <button className="del-btn" onClick={e => deleteConv(e, conv.id)}
+                    style={{ position:'absolute', right:6, top:'50%', transform:'translateY(-50%)', opacity:0, background:'none', border:'none', color:'#333', cursor:'pointer', fontSize:12, transition:'all 0.15s', fontFamily:mono }}
+                    onMouseEnter={e => e.target.style.color='#ff4455'}
+                    onMouseLeave={e => e.target.style.color='#333'}>
+                    ✕
+                  </button>
+                </div>
+              ))}
             </div>
 
-            {/* User profile */}
-            <div className="p-3 border-t border-surface-800">
+            {/* User */}
+            <div style={{ padding:'10px', borderTop:'1px solid #1a1a1a' }}>
               <button onClick={() => navigate('/profile')}
-                className="sidebar-item w-full">
-                <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                style={{ display:'flex', alignItems:'center', gap:8, width:'100%', background:'none', border:'none', cursor:'pointer', padding:'6px', borderRadius:3, transition:'all 0.15s', fontFamily:mono }}
+                onMouseEnter={e => e.currentTarget.style.background='#7b2fff11'}
+                onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                <div style={{ width:26, height:26, borderRadius:3, background:'#7b2fff22', border:'1px solid #7b2fff44', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, color:'#7b2fff', flexShrink:0 }}>
                   {user?.username?.[0]?.toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate">@{user?.username}</p>
-                  <p className="text-xs text-surface-600">View profile</p>
+                <div style={{ textAlign:'left' }}>
+                  <div style={{ fontSize:11, color:'#888' }}>@{user?.username}</div>
+                  <div style={{ fontSize:9, color:'#333' }}>// view profile</div>
                 </div>
-                <span className="text-surface-600 text-xs">→</span>
               </button>
             </div>
-          </motion.aside>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
 
-        {/* Top bar */}
-        <header className="h-12 bg-surface-900 border-b border-surface-800 flex items-center px-4 gap-3 flex-shrink-0">
+        {/* Topbar */}
+        <div style={{ height:44, background:'#080808', borderBottom:'1px solid #1a1a1a', display:'flex', alignItems:'center', padding:'0 16px', gap:12, flexShrink:0 }}>
           {!sidebarOpen && (
-            <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-1.5 text-surface-400">☰</button>
+            <button onClick={() => setSidebarOpen(true)} style={{ background:'none', border:'none', color:'#444', cursor:'pointer', fontSize:16, fontFamily:mono }}>☰</button>
           )}
-          <div className="flex-1 flex items-center gap-2 overflow-x-auto">
+          <div style={{ flex:1, display:'flex', alignItems:'center', gap:8, overflowX:'auto' }}>
             {meta && (
-              <div className="flex items-center gap-2">
-                <span className="badge bg-surface-800 text-surface-300">
-                  {LANG_FLAGS[meta.detectedLanguage] || '🌐'} {meta.detectedLanguage}
+              <>
+                <span style={{ fontSize:10, color:'#7b2fff', border:'1px solid #7b2fff33', padding:'2px 8px', borderRadius:3 }}>
+                  {LANG_FLAGS[meta.detectedLanguage] || '🌐'} lang::{meta.detectedLanguage}
                 </span>
-                <span className="badge bg-surface-800 text-surface-300">
-                  🎯 {meta.detectedIntent}
+                <span style={{ fontSize:10, color:'#444', border:'1px solid #1a1a1a', padding:'2px 8px', borderRadius:3 }}>
+                  intent::{meta.detectedIntent}
                 </span>
                 {meta.memoriesUsed > 0 && (
-                  <span className="badge bg-brand-900/50 text-brand-300 border border-brand-800">
-                    🧠 {meta.memoriesUsed} {meta.memoriesUsed > 1 ? 'memories' : 'memory'}
+                  <span style={{ fontSize:10, color:'#00ff88', border:'1px solid #00ff8833', padding:'2px 8px', borderRadius:3 }}>
+                    mem::{meta.memoriesUsed}
                   </span>
                 )}
-              </div>
+              </>
             )}
           </div>
-          <button onClick={logout} className="btn-ghost text-xs text-surface-500">Sign out</button>
-        </header>
+          <button onClick={logout} style={{ background:'none', border:'none', color:'#333', cursor:'pointer', fontSize:11, fontFamily:mono }}
+            onMouseEnter={e => e.target.style.color='#ff4455'}
+            onMouseLeave={e => e.target.style.color='#333'}>
+            logout()
+          </button>
+        </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div style={{ flex:1, overflowY:'auto', padding:'24px 20px' }}>
           {messages.length === 0 ? (
             <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
-              className="flex flex-col items-center justify-center h-full text-center">
-              <div className="text-6xl mb-4">🌍</div>
-              <h2 className="text-xl font-bold text-surface-200 mb-2">Start a conversation</h2>
-              <p className="text-surface-500 text-sm mb-8 max-w-sm">
-                Type in any language — I'll detect it and respond in the same one
-              </p>
-              <div className="flex flex-wrap gap-2 justify-center max-w-md">
+              style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100%', textAlign:'center' }}>
+              <div style={{ fontSize:32, fontWeight:700, color:'#7b2fff', letterSpacing:2, marginBottom:8 }} className="animate-flicker">
+                LANG<span style={{ color:'#00ff88' }}>BOT</span>
+              </div>
+              <div style={{ fontSize:11, color:'#333', marginBottom:4 }}>// multilingual ai terminal</div>
+              <div style={{ fontSize:11, color:'#222', marginBottom:32 }}>// type in any language to begin session</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', maxWidth:400 }}>
                 {EXAMPLES.map(ex => (
                   <motion.button key={ex} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}
                     onClick={() => setInput(ex)}
-                    className="badge bg-surface-800 border border-surface-700 text-surface-300 hover:border-brand-600 hover:text-brand-300 transition-colors cursor-pointer py-2 px-3 text-sm">
-                    {ex}
+                    style={{ fontSize:12, color:'#444', border:'1px solid #1a1a1a', background:'transparent', padding:'6px 14px', borderRadius:3, cursor:'pointer', fontFamily:mono, transition:'all 0.15s' }}
+                    onMouseEnter={e => { e.target.style.color='#00ff88'; e.target.style.borderColor='#00ff8844'; }}
+                    onMouseLeave={e => { e.target.style.color='#444'; e.target.style.borderColor='#1a1a1a'; }}>
+                    &gt; {ex}
                   </motion.button>
                 ))}
               </div>
             </motion.div>
           ) : (
-            <div className="max-w-3xl mx-auto space-y-4">
+            <div style={{ maxWidth:760, margin:'0 auto', display:'flex', flexDirection:'column', gap:16 }}>
               <AnimatePresence>
                 {messages.map(msg => <Message key={msg.id} msg={msg} />)}
               </AnimatePresence>
@@ -284,42 +287,42 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Input area */}
-        <div className="flex-shrink-0 px-4 py-4 bg-surface-950 border-t border-surface-800">
-          <div className="max-w-3xl mx-auto">
+        {/* Input */}
+        <div style={{ flexShrink:0, padding:'12px 20px', background:'#080808', borderTop:'1px solid #1a1a1a' }}>
+          <div style={{ maxWidth:760, margin:'0 auto' }}>
             {listening && (
               <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
-                className="flex items-center gap-2 mb-2 px-1">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-xs text-red-400 font-medium">Listening... speak now</span>
+                style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+                <div style={{ width:6, height:6, borderRadius:'50%', background:'#ff4455', animation:'pulse 1s infinite' }} />
+                <span style={{ fontSize:10, color:'#ff4455', fontFamily:mono }}>// recording input...</span>
               </motion.div>
             )}
-            <div className="flex items-end gap-2 card px-4 py-3 focus-within:border-surface-700 transition-colors">
-              <textarea ref={textareaRef} value={input}
+            <div style={{ display:'flex', alignItems:'flex-end', gap:8, background:'#0c0c0c', border:'1px solid #1a1a1a', borderRadius:4, padding:'8px 10px' }}
+              onFocus={e => e.currentTarget.style.borderColor='#7b2fff44'}
+              onBlur={e => e.currentTarget.style.borderColor='#1a1a1a'}>
+              <div style={{ fontSize:12, color:'#7b2fff', flexShrink:0, paddingBottom:6, fontFamily:mono }}>$</div>
+              <textarea value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }}}
-                placeholder="Type in any language... (Enter to send, Shift+Enter for new line)"
+                placeholder="type in any language..."
                 rows={1} disabled={loading}
-                className="flex-1 bg-transparent text-sm text-surface-100 placeholder-surface-600 outline-none resize-none max-h-32 leading-relaxed"
-                style={{ scrollbarWidth:'none' }} />
-              <div className="flex items-center gap-1.5 flex-shrink-0">
+                style={{ flex:1, background:'transparent', border:'none', outline:'none', color:'#e0e0e0', fontSize:13, fontFamily:mono, resize:'none', maxHeight:120, lineHeight:1.5, paddingBottom:4 }} />
+              <div style={{ display:'flex', gap:6, flexShrink:0 }}>
                 <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }}
                   onClick={listening ? stopListening : startListening}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-base transition-colors ${
-                    listening ? 'bg-red-900/50 border border-red-700 text-red-400' : 'bg-surface-800 hover:bg-surface-700 text-surface-400'
-                  }`}>
+                  style={{ width:30, height:30, borderRadius:3, border: listening ? '1px solid #ff445544' : '1px solid #1a1a1a', background:'transparent', color: listening ? '#ff4455' : '#333', cursor:'pointer', fontSize:14, fontFamily:mono, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
                   {listening ? '⏹' : '🎤'}
                 </motion.button>
                 <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }}
                   onClick={sendMessage} disabled={loading || !input.trim()}
-                  className="w-8 h-8 rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-white text-sm transition-colors">
+                  style={{ width:30, height:30, borderRadius:3, background: input.trim() ? '#7b2fff' : 'transparent', border:'1px solid ' + (input.trim() ? '#7b2fff' : '#1a1a1a'), color: input.trim() ? '#000' : '#333', cursor: input.trim() ? 'pointer' : 'default', fontSize:14, fontFamily:mono, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
                   →
                 </motion.button>
               </div>
             </div>
-            <p className="text-center text-surface-700 text-xs mt-2">
-              LangBot · Powered by Llama 3.3 70B · 100+ languages
-            </p>
+            <div style={{ textAlign:'center', fontSize:9, color:'#1a1a1a', marginTop:6, fontFamily:mono }}>
+              // langbot_v2 · llama-3.3-70b · 100+ languages · enter to send
+            </div>
           </div>
         </div>
       </div>
