@@ -6,10 +6,54 @@ import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 
 const LANG_FLAGS = {
-  en: '🇬🇧', fr: '🇫🇷', es: '🇪🇸', de: '🇩🇪', it: '��🇹',
-  ja: '🇯🇵', zh: '🇨🇳', ar: '🇸🇦', pt: '��🇷', ru: '🇷🇺',
-  ko: '🇰🇷', hi: '🇮🇳', nl: '��🇱', pl: '🇵🇱', tr: '🇹🇷',
+  en:'🇬🇧',fr:'🇫🇷',es:'🇪🇸',de:'🇩🇪',it:'🇮🇹',
+  ja:'🇯🇵',zh:'🇨🇳',ar:'🇸🇦',pt:'🇧🇷',ru:'🇷🇺',
+  ko:'🇰🇷',hi:'🇮🇳',nl:'🇳🇱',pl:'🇵🇱',tr:'🇹🇷',
 };
+
+const EXAMPLES = ['Hello! What can you do?','Bonjour!','こんにちは!','مرحبا!','नमस्ते!','Hola!'];
+
+function TypingIndicator() {
+  return (
+    <div className="flex items-end gap-2 animate-fade-in">
+      <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-xs flex-shrink-0">🤖</div>
+      <div className="card px-4 py-3">
+        <div className="flex gap-1 items-center h-4">
+          {[0,1,2].map(i => (
+            <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-surface-500"
+              animate={{ y:[0,-4,0] }} transition={{ repeat:Infinity, duration:0.6, delay:i*0.15 }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Message({ msg }) {
+  const isUser = msg.role === 'USER';
+  return (
+    <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.2 }}
+      className={`flex items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+      {!isUser && (
+        <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-xs flex-shrink-0 mb-0.5">🤖</div>
+      )}
+      <div className={`max-w-[65%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+          isUser
+            ? 'bg-brand-600 text-white rounded-br-sm'
+            : 'card text-surface-100 rounded-bl-sm'
+        }`}>
+          {msg.content}
+        </div>
+        {msg.language && (
+          <span className="text-xs text-surface-600 px-1">
+            {LANG_FLAGS[msg.language] || '🌐'} {msg.language}
+          </span>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 export default function ChatPage() {
   const { user, logout } = useAuth();
@@ -17,277 +61,268 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState([]);
   const [activeConvId, setActiveConvId] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastMeta, setLastMeta] = useState(null);
-  const [isListening, setIsListening] = useState(false);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [meta, setMeta] = useState(null);
+  const [listening, setListening] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
+  const textareaRef = useRef(null);
 
   useEffect(() => { loadConversations(); }, []);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
   async function loadConversations() {
     try {
       const res = await chatApi.getConversations();
       setConversations(res.data);
-    } catch (err) { console.error(err); }
+    } catch {}
   }
 
-  async function loadConversation(convId) {
+  async function loadConversation(id) {
     try {
-      const res = await chatApi.getConversation(convId);
-      setActiveConvId(convId);
+      const res = await chatApi.getConversation(id);
+      setActiveConvId(id);
       setMessages(res.data.messages);
-    } catch (err) { console.error(err); }
+      setMeta(null);
+    } catch {}
   }
 
   async function sendMessage() {
-    if (!inputText.trim() || isLoading) return;
-    const messageText = inputText.trim();
-    setInputText('');
+    if (!input.trim() || loading) return;
+    const text = input.trim();
+    setInput('');
     const tempId = 'temp-' + Date.now();
-    setMessages(prev => [...prev, { id: tempId, role: 'USER', content: messageText }]);
-    setIsLoading(true);
+    setMessages(p => [...p, { id:tempId, role:'USER', content:text }]);
+    setLoading(true);
     try {
-      const res = await chatApi.sendMessage(messageText, activeConvId);
+      const res = await chatApi.sendMessage(text, activeConvId);
       const { conversationId, responseText, detectedLanguage, detectedIntent, memoriesUsed } = res.data;
       setActiveConvId(conversationId);
-      setMessages(prev => [
-        ...prev.filter(m => m.id !== tempId),
-        { id: 'u-' + Date.now(), role: 'USER', content: messageText, language: detectedLanguage },
-        { id: 'b-' + Date.now(), role: 'ASSISTANT', content: responseText, language: detectedLanguage },
+      setMessages(p => [
+        ...p.filter(m => m.id !== tempId),
+        { id:'u-'+Date.now(), role:'USER', content:text, language:detectedLanguage },
+        { id:'b-'+Date.now(), role:'ASSISTANT', content:responseText, language:detectedLanguage },
       ]);
-      setLastMeta({ detectedLanguage, detectedIntent, memoriesUsed });
+      setMeta({ detectedLanguage, detectedIntent, memoriesUsed });
       loadConversations();
-    } catch (err) {
-      setMessages(prev => prev.filter(m => m.id !== tempId));
-      toast.error('Failed to send message');
-    } finally { setIsLoading(false); }
+    } catch {
+      setMessages(p => p.filter(m => m.id !== tempId));
+      toast.error('Failed to send');
+    } finally { setLoading(false); }
   }
 
   function startListening() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast.error('Voice input not supported in this browser. Use Chrome.');
-      return;
-    }
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (e) => {
-      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-      setInputText(transcript);
-    };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => {
-      setIsListening(false);
-      toast.error('Voice input error. Try again.');
-    };
-    recognitionRef.current = recognition;
-    recognition.start();
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast.error('Use Chrome for voice input'); return; }
+    const r = new SR();
+    r.continuous = false;
+    r.interimResults = true;
+    r.onstart = () => setListening(true);
+    r.onresult = e => setInput(Array.from(e.results).map(r => r[0].transcript).join(''));
+    r.onend = () => setListening(false);
+    r.onerror = () => { setListening(false); toast.error('Voice error'); };
+    recognitionRef.current = r;
+    r.start();
   }
 
-  function stopListening() {
-    recognitionRef.current?.stop();
-    setIsListening(false);
+  function stopListening() { recognitionRef.current?.stop(); setListening(false); }
+
+  function newChat() { setActiveConvId(null); setMessages([]); setMeta(null); }
+
+  async function deleteConversation(e, id) {
+    e.stopPropagation();
+    try {
+      await chatApi.deleteConversation(id);
+      setConversations(p => p.filter(c => c.id !== id));
+      if (activeConvId === id) newChat();
+      toast.success('Deleted');
+    } catch { toast.error('Failed to delete'); }
   }
+
+  const filteredConvs = conversations.filter(c =>
+    c.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div style={s.container}>
-      <Toaster position="top-center" toastOptions={{ style: { background: '#1e1e2e', color: '#cdd6f4', border: '1px solid #313244' } }} />
+    <div className="flex h-screen bg-surface-950 text-surface-100 overflow-hidden">
+      <Toaster position="top-center" toastOptions={{
+        style: { background:'#18181b', color:'#fafafa', border:'1px solid #27272a', fontSize:14 }
+      }} />
 
       {/* Sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
-          <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
-            transition={{ type: 'spring', damping: 25 }} style={s.sidebar}>
-            <div style={s.sidebarTop}>
-              <span style={s.sidebarLogo}>🌍 LangBot</span>
-              <button onClick={() => setSidebarOpen(false)} style={s.closeBtn}>✕</button>
-            </div>
-            <button onClick={() => { setActiveConvId(null); setMessages([]); setLastMeta(null); }} style={s.newChatBtn}>
-              + New Chat
-            </button>
-            <div style={s.convList}>
-              {conversations.length === 0 && (
-                <p style={s.noConvs}>No conversations yet</p>
-              )}
-              {conversations.map(conv => (
-                <motion.button key={conv.id} onClick={() => loadConversation(conv.id)}
-                  whileHover={{ backgroundColor: '#313244' }}
-                  style={{ ...s.convItem, ...(conv.id === activeConvId ? s.convItemActive : {}) }}>
-                  <span style={s.convTitle}>{conv.title}</span>
-                  <span style={s.convDate}>{new Date(conv.updatedAt).toLocaleDateString()}</span>
-                </motion.button>
-              ))}
-            </div>
-            <div style={s.sidebarBottom}>
-              <button onClick={() => navigate('/profile')} style={s.profileBtn}>
-                <div style={s.profileAvatar}>{user?.username?.[0]?.toUpperCase()}</div>
-                <span style={s.profileName}>@{user?.username}</span>
+          <motion.aside initial={{ x:-280, opacity:0 }} animate={{ x:0, opacity:1 }}
+            exit={{ x:-280, opacity:0 }} transition={{ type:'spring', damping:25, stiffness:200 }}
+            className="w-64 flex-shrink-0 bg-surface-900 border-r border-surface-800 flex flex-col">
+
+            {/* Sidebar header */}
+            <div className="p-4 border-b border-surface-800">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🌍</span>
+                  <span className="font-bold text-surface-50">LangBot</span>
+                </div>
+                <button onClick={() => setSidebarOpen(false)} className="btn-ghost p-1.5 text-surface-500">✕</button>
+              </div>
+              <button onClick={newChat}
+                className="btn-primary w-full flex items-center justify-center gap-2 text-sm h-9">
+                <span>+</span> New Chat
               </button>
             </div>
-          </motion.div>
+
+            {/* Search */}
+            <div className="px-3 py-2">
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search conversations..." className="input-field text-xs py-2" />
+            </div>
+
+            {/* Conversations */}
+            <div className="flex-1 overflow-y-auto px-2 py-1">
+              {filteredConvs.length === 0 && (
+                <p className="text-center text-surface-600 text-xs mt-8">No conversations yet</p>
+              )}
+              <AnimatePresence>
+                {filteredConvs.map(conv => (
+                  <motion.div key={conv.id} initial={{ opacity:0 }} animate={{ opacity:1 }}
+                    className="group relative">
+                    <button onClick={() => loadConversation(conv.id)}
+                      className={`sidebar-item w-full py-2.5 ${conv.id === activeConvId ? 'sidebar-item-active' : ''}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{conv.title}</p>
+                        <p className="text-xs text-surface-600 mt-0.5">
+                          {new Date(conv.updatedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </button>
+                    <button onClick={e => deleteConversation(e, conv.id)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-surface-600 hover:text-red-400 transition-all text-xs p-1">
+                      🗑
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+
+            {/* User profile */}
+            <div className="p-3 border-t border-surface-800">
+              <button onClick={() => navigate('/profile')}
+                className="sidebar-item w-full">
+                <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  {user?.username?.[0]?.toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate">@{user?.username}</p>
+                  <p className="text-xs text-surface-600">View profile</p>
+                </div>
+                <span className="text-surface-600 text-xs">→</span>
+              </button>
+            </div>
+          </motion.aside>
         )}
       </AnimatePresence>
 
       {/* Main */}
-      <div style={s.main}>
+      <div className="flex-1 flex flex-col min-w-0">
+
         {/* Top bar */}
-        <div style={s.topBar}>
+        <header className="h-12 bg-surface-900 border-b border-surface-800 flex items-center px-4 gap-3 flex-shrink-0">
           {!sidebarOpen && (
-            <button onClick={() => setSidebarOpen(true)} style={s.menuBtn}>☰</button>
+            <button onClick={() => setSidebarOpen(true)} className="btn-ghost p-1.5 text-surface-400">☰</button>
           )}
-          <div style={s.metaRow}>
-            {lastMeta && (
-              <>
-                <span style={s.badge}>{LANG_FLAGS[lastMeta.detectedLanguage] || '🌐'} {lastMeta.detectedLanguage}</span>
-                <span style={s.badge}>🎯 {lastMeta.detectedIntent}</span>
-                {lastMeta.memoriesUsed > 0 && (
-                  <span style={{ ...s.badge, background: '#1e3a2e', color: '#a6e3a1' }}>
-                    🧠 {lastMeta.memoriesUsed} memor{lastMeta.memoriesUsed > 1 ? 'ies' : 'y'}
+          <div className="flex-1 flex items-center gap-2 overflow-x-auto">
+            {meta && (
+              <div className="flex items-center gap-2">
+                <span className="badge bg-surface-800 text-surface-300">
+                  {LANG_FLAGS[meta.detectedLanguage] || '🌐'} {meta.detectedLanguage}
+                </span>
+                <span className="badge bg-surface-800 text-surface-300">
+                  🎯 {meta.detectedIntent}
+                </span>
+                {meta.memoriesUsed > 0 && (
+                  <span className="badge bg-brand-900/50 text-brand-300 border border-brand-800">
+                    🧠 {meta.memoriesUsed} {meta.memoriesUsed > 1 ? 'memories' : 'memory'}
                   </span>
                 )}
-              </>
+              </div>
             )}
           </div>
-        </div>
+          <button onClick={logout} className="btn-ghost text-xs text-surface-500">Sign out</button>
+        </header>
 
         {/* Messages */}
-        <div style={s.messagesArea}>
-          {messages.length === 0 && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={s.emptyState}>
-              <div style={s.emptyEmoji}>🌍</div>
-              <h2 style={s.emptyTitle}>Start a conversation</h2>
-              <p style={s.emptyHint}>Type in any language — I'll respond in the same one</p>
-              <div style={s.exampleBtns}>
-                {['Hello!', 'Bonjour!', 'こんにちは!', 'مرحبا!', 'नमस्ते!'].map(ex => (
-                  <motion.button key={ex} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                    onClick={() => setInputText(ex)} style={s.exampleBtn}>{ex}</motion.button>
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          {messages.length === 0 ? (
+            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
+              className="flex flex-col items-center justify-center h-full text-center">
+              <div className="text-6xl mb-4">🌍</div>
+              <h2 className="text-xl font-bold text-surface-200 mb-2">Start a conversation</h2>
+              <p className="text-surface-500 text-sm mb-8 max-w-sm">
+                Type in any language — I'll detect it and respond in the same one
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center max-w-md">
+                {EXAMPLES.map(ex => (
+                  <motion.button key={ex} whileHover={{ scale:1.05 }} whileTap={{ scale:0.95 }}
+                    onClick={() => setInput(ex)}
+                    className="badge bg-surface-800 border border-surface-700 text-surface-300 hover:border-brand-600 hover:text-brand-300 transition-colors cursor-pointer py-2 px-3 text-sm">
+                    {ex}
+                  </motion.button>
                 ))}
               </div>
             </motion.div>
+          ) : (
+            <div className="max-w-3xl mx-auto space-y-4">
+              <AnimatePresence>
+                {messages.map(msg => <Message key={msg.id} msg={msg} />)}
+              </AnimatePresence>
+              {loading && <TypingIndicator />}
+              <div ref={messagesEndRef} />
+            </div>
           )}
-
-          <AnimatePresence>
-            {messages.map(msg => (
-              <motion.div key={msg.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                style={msg.role === 'USER' ? s.userRow : s.botRow}>
-                {msg.role === 'ASSISTANT' && <div style={s.botAvatar}>🤖</div>}
-                <div style={msg.role === 'USER' ? s.userBubble : s.botBubble}>
-                  <p style={s.msgText}>{msg.content}</p>
-                  {msg.language && (
-                    <span style={s.langTag}>{LANG_FLAGS[msg.language] || '🌐'} {msg.language}</span>
-                  )}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-          {isLoading && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={s.botRow}>
-              <div style={s.botAvatar}>🤖</div>
-              <div style={s.botBubble}>
-                <div style={s.typingDots}>
-                  {[0, 1, 2].map(i => (
-                    <motion.div key={i} style={s.dot}
-                      animate={{ y: [0, -6, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.15 }} />
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          )}
-          <div ref={messagesEndRef} />
         </div>
 
         {/* Input area */}
-        <div style={s.inputArea}>
-          <div style={s.inputBox}>
-            <textarea value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }}}
-              placeholder="Type in any language... (Enter to send)"
-              style={s.textarea} disabled={isLoading} rows={1} />
-            <div style={s.inputActions}>
-              <motion.button
-                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                onClick={isListening ? stopListening : startListening}
-                style={{ ...s.micBtn, ...(isListening ? s.micActive : {}) }}
-                title="Voice input">
-                {isListening ? '⏹' : '🎤'}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                onClick={sendMessage}
-                disabled={isLoading || !inputText.trim()}
-                style={s.sendBtn}>
-                ➤
-              </motion.button>
+        <div className="flex-shrink-0 px-4 py-4 bg-surface-950 border-t border-surface-800">
+          <div className="max-w-3xl mx-auto">
+            {listening && (
+              <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
+                className="flex items-center gap-2 mb-2 px-1">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-xs text-red-400 font-medium">Listening... speak now</span>
+              </motion.div>
+            )}
+            <div className="flex items-end gap-2 card px-4 py-3 focus-within:border-surface-700 transition-colors">
+              <textarea ref={textareaRef} value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }}}
+                placeholder="Type in any language... (Enter to send, Shift+Enter for new line)"
+                rows={1} disabled={loading}
+                className="flex-1 bg-transparent text-sm text-surface-100 placeholder-surface-600 outline-none resize-none max-h-32 leading-relaxed"
+                style={{ scrollbarWidth:'none' }} />
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }}
+                  onClick={listening ? stopListening : startListening}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-base transition-colors ${
+                    listening ? 'bg-red-900/50 border border-red-700 text-red-400' : 'bg-surface-800 hover:bg-surface-700 text-surface-400'
+                  }`}>
+                  {listening ? '⏹' : '🎤'}
+                </motion.button>
+                <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:0.9 }}
+                  onClick={sendMessage} disabled={loading || !input.trim()}
+                  className="w-8 h-8 rounded-lg bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center text-white text-sm transition-colors">
+                  →
+                </motion.button>
+              </div>
             </div>
+            <p className="text-center text-surface-700 text-xs mt-2">
+              LangBot · Powered by Llama 3.3 70B · 100+ languages
+            </p>
           </div>
-          {isListening && (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={s.listeningText}>
-              🔴 Listening... speak now
-            </motion.p>
-          )}
         </div>
       </div>
     </div>
   );
 }
-
-const s = {
-  container: { display: 'flex', height: '100vh', background: '#1e1e2e', fontFamily: "'Inter', system-ui, sans-serif", color: '#cdd6f4', overflow: 'hidden' },
-  sidebar: { width: 280, background: '#181825', borderRight: '1px solid #313244', display: 'flex', flexDirection: 'column', flexShrink: 0 },
-  sidebarTop: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 16px 12px' },
-  sidebarLogo: { fontSize: 16, fontWeight: 800, color: '#cdd6f4' },
-  closeBtn: { background: 'none', border: 'none', color: '#6c7086', cursor: 'pointer', fontSize: 16, padding: 4 },
-  newChatBtn: { margin: '0 12px 12px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
-  convList: { flex: 1, overflowY: 'auto', padding: '0 8px' },
-  noConvs: { textAlign: 'center', color: '#45475a', fontSize: 13, marginTop: 20 },
-  convItem: { display: 'flex', flexDirection: 'column', width: '100%', background: 'transparent', border: 'none', color: '#a6adc8', padding: '10px 10px', borderRadius: 8, cursor: 'pointer', textAlign: 'left', marginBottom: 2, transition: 'background 0.15s', fontFamily: 'inherit' },
-  convItemActive: { background: '#313244', color: '#cdd6f4' },
-  convTitle: { fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  convDate: { fontSize: 11, color: '#45475a', marginTop: 2 },
-  sidebarBottom: { borderTop: '1px solid #313244', padding: 12 },
-  profileBtn: { display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'transparent', border: 'none', color: '#cdd6f4', cursor: 'pointer', padding: '8px 4px', borderRadius: 8, fontFamily: 'inherit' },
-  profileAvatar: { width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 },
-  profileName: { fontSize: 13, fontWeight: 600 },
-  main: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-  topBar: { background: '#181825', borderBottom: '1px solid #313244', padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 12, minHeight: 52 },
-  menuBtn: { background: 'none', border: 'none', color: '#cdd6f4', cursor: 'pointer', fontSize: 20, padding: '0 8px 0 0' },
-  metaRow: { display: 'flex', gap: 8, flexWrap: 'wrap' },
-  badge: { background: '#313244', color: '#a6adc8', padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 500 },
-  messagesArea: { flex: 1, overflowY: 'auto', padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 12 },
-  emptyState: { textAlign: 'center', margin: 'auto', padding: '40px 20px' },
-  emptyEmoji: { fontSize: 64, marginBottom: 16 },
-  emptyTitle: { margin: '0 0 8px', fontSize: 22, fontWeight: 700, color: '#cdd6f4' },
-  emptyHint: { margin: '0 0 24px', fontSize: 14, color: '#6c7086' },
-  exampleBtns: { display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
-  exampleBtn: { background: '#313244', border: '1px solid #45475a', color: '#cdd6f4', padding: '8px 16px', borderRadius: 99, cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' },
-  userRow: { display: 'flex', justifyContent: 'flex-end' },
-  botRow: { display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-end', gap: 8 },
-  botAvatar: { fontSize: 24, flexShrink: 0, marginBottom: 4 },
-  userBubble: { background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: '#fff', borderRadius: '18px 18px 4px 18px', padding: '12px 16px', maxWidth: '65%' },
-  botBubble: { background: '#181825', border: '1px solid #313244', color: '#cdd6f4', borderRadius: '18px 18px 18px 4px', padding: '12px 16px', maxWidth: '65%' },
-  msgText: { margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap', fontSize: 14 },
-  langTag: { fontSize: 11, opacity: 0.6, marginTop: 6, display: 'block' },
-  typingDots: { display: 'flex', gap: 4, padding: '4px 0' },
-  dot: { width: 8, height: 8, borderRadius: '50%', background: '#7c3aed' },
-  inputArea: { background: '#181825', borderTop: '1px solid #313244', padding: '16px 20px' },
-  inputBox: { display: 'flex', gap: 8, alignItems: 'flex-end', background: '#11111b', border: '1px solid #313244', borderRadius: 14, padding: '8px 8px 8px 16px' },
-  textarea: { flex: 1, border: 'none', background: 'transparent', padding: '6px 0', fontSize: 14, color: '#cdd6f4', outline: 'none', resize: 'none', fontFamily: 'inherit', maxHeight: 120, lineHeight: 1.5 },
-  inputActions: { display: 'flex', gap: 6, alignItems: 'center' },
-  micBtn: { background: '#313244', border: 'none', borderRadius: 10, width: 40, height: 40, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' },
-  micActive: { background: '#3b1a1a', border: '1px solid #f38ba8' },
-  sendBtn: { background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: '#fff', border: 'none', borderRadius: 10, width: 40, height: 40, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  listeningText: { margin: '8px 0 0', fontSize: 12, color: '#f38ba8', textAlign: 'center' },
-};

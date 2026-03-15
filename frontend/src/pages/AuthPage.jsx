@@ -1,26 +1,33 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
-import { motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
+
+const FEATURES = [
+  { icon: '🌍', text: '100+ languages supported' },
+  { icon: '🧠', text: 'Cross-language vector memory' },
+  { icon: '⚡', text: 'Powered by Llama 3.3 70B' },
+  { icon: '🔒', text: 'JWT secured & BCrypt hashed' },
+];
 
 export default function AuthPage() {
   const { login, register } = useAuth();
   const [tab, setTab] = useState('login');
-  const [formData, setFormData] = useState({ username: '', email: '', password: '' });
+  const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
 
-  const handleChange = (e) =>
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleChange = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setLoading(true);
     try {
       if (tab === 'login') {
-        await login(formData.username, formData.password);
+        await login(form.username, form.password);
         toast.success('Welcome back!');
       } else {
-        await register(formData.username, formData.email, formData.password);
+        await register(form.username, form.email, form.password);
         toast.success('Account created!');
       }
     } catch (err) {
@@ -31,67 +38,130 @@ export default function AuthPage() {
   };
 
   return (
-    <div style={s.bg}>
-      <Toaster position="top-center" toastOptions={{ style: { background: '#1e1e2e', color: '#cdd6f4', border: '1px solid #313244' } }} />
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} style={s.card}>
-        <div style={s.logoWrap}>
-          <span style={s.logoEmoji}>🌍</span>
-          <div>
-            <h1 style={s.title}>LangBot</h1>
-            <p style={s.subtitle}>Chat in any language</p>
+    <div className="min-h-screen bg-surface-950 flex">
+      <Toaster position="top-center" toastOptions={{
+        style: { background: '#18181b', color: '#fafafa', border: '1px solid #27272a', fontSize: 14 }
+      }} />
+
+      {/* Left panel */}
+      <div className="hidden lg:flex flex-col justify-between w-[480px] bg-surface-900 border-r border-surface-800 p-12">
+        <div>
+          <div className="flex items-center gap-3 mb-16">
+            <span className="text-3xl">🌍</span>
+            <span className="text-xl font-bold text-surface-50">LangBot</span>
+          </div>
+          <h1 className="text-4xl font-bold text-surface-50 leading-tight mb-4">
+            Chat in any<br />
+            <span className="gradient-text">language.</span>
+          </h1>
+          <p className="text-surface-400 text-lg leading-relaxed mb-12">
+            The AI assistant that understands you — no matter what language you speak in.
+          </p>
+          <div className="space-y-4">
+            {FEATURES.map((f, i) => (
+              <motion.div key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 + 0.3 }}
+                className="flex items-center gap-3 text-surface-300">
+                <span className="text-xl w-8">{f.icon}</span>
+                <span className="text-sm font-medium">{f.text}</span>
+              </motion.div>
+            ))}
           </div>
         </div>
-        <div style={s.tabs}>
-          {['login', 'register'].map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              style={{ ...s.tab, ...(tab === t ? s.tabActive : {}) }}>
-              {t === 'login' ? 'Sign In' : 'Register'}
-            </button>
+        <div className="flex gap-2 flex-wrap">
+          {['🇬🇧','🇫🇷','🇪🇸','🇩🇪','🇯🇵','🇸🇦','🇨🇳','🇮🇳','🇧🇷','🇷🇺','🇰🇷','🇮🇹'].map((f, i) => (
+            <span key={i} className="text-2xl">{f}</span>
           ))}
+          <span className="text-surface-500 text-sm self-center ml-1">+90 more</span>
         </div>
-        <form onSubmit={handleSubmit} style={s.form}>
-          <div style={s.inputWrap}>
-            <span style={s.inputIcon}>👤</span>
-            <input name="username" type="text" placeholder="Username" value={formData.username}
-              onChange={handleChange} required style={s.input} />
+      </div>
+
+      {/* Right panel */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-[400px]">
+
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-8 lg:hidden">
+            <span className="text-2xl">🌍</span>
+            <span className="text-lg font-bold">LangBot</span>
           </div>
-          {tab === 'register' && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={s.inputWrap}>
-              <span style={s.inputIcon}>✉️</span>
-              <input name="email" type="email" placeholder="Email" value={formData.email}
-                onChange={handleChange} required style={s.input} />
-            </motion.div>
-          )}
-          <div style={s.inputWrap}>
-            <span style={s.inputIcon}>🔒</span>
-            <input name="password" type="password" placeholder="Password" value={formData.password}
-              onChange={handleChange} required minLength={8} style={s.input} />
+
+          <h2 className="text-2xl font-bold text-surface-50 mb-1">
+            {tab === 'login' ? 'Welcome back' : 'Create account'}
+          </h2>
+          <p className="text-surface-500 text-sm mb-8">
+            {tab === 'login' ? 'Sign in to continue chatting' : 'Start chatting in any language'}
+          </p>
+
+          {/* Tabs */}
+          <div className="flex gap-1 bg-surface-900 border border-surface-800 p-1 rounded-lg mb-6">
+            {['login', 'register'].map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all duration-150 ${
+                  tab === t ? 'bg-surface-700 text-surface-50' : 'text-surface-500 hover:text-surface-300'
+                }`}>
+                {t === 'login' ? 'Sign In' : 'Register'}
+              </button>
+            ))}
           </div>
-          <motion.button type="submit" disabled={loading}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={s.btn}>
-            {loading ? '⏳ Please wait...' : tab === 'login' ? '🚀 Sign In' : '✨ Create Account'}
-          </motion.button>
-        </form>
-        <p style={s.langs}>🇬🇧 🇫🇷 🇪🇸 🇩🇪 🇯🇵 🇸🇦 🇨�� 🇮🇳 🇧🇷 🇷🇺 + 90 more</p>
-      </motion.div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-surface-400 uppercase tracking-wide mb-1.5 block">
+                Username
+              </label>
+              <input name="username" type="text" placeholder="yourname"
+                value={form.username} onChange={handleChange} required
+                className="input-field" />
+            </div>
+
+            <AnimatePresence>
+              {tab === 'register' && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}>
+                  <label className="text-xs font-semibold text-surface-400 uppercase tracking-wide mb-1.5 block">
+                    Email
+                  </label>
+                  <input name="email" type="email" placeholder="you@example.com"
+                    value={form.email} onChange={handleChange} required
+                    className="input-field" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div>
+              <label className="text-xs font-semibold text-surface-400 uppercase tracking-wide mb-1.5 block">
+                Password
+              </label>
+              <div className="relative">
+                <input name="password" type={showPass ? 'text' : 'password'}
+                  placeholder="Min 8 characters" value={form.password}
+                  onChange={handleChange} required minLength={8}
+                  className="input-field pr-12" />
+                <button type="button" onClick={() => setShowPass(p => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-300 transition-colors text-lg">
+                  {showPass ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+
+            <motion.button type="submit" disabled={loading}
+              whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+              className="btn-primary w-full mt-2 flex items-center justify-center gap-2 h-11">
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>{tab === 'login' ? '→ Sign In' : '✨ Create Account'}</>
+              )}
+            </motion.button>
+          </form>
+
+          <p className="text-center text-surface-600 text-xs mt-6">
+            By continuing, you agree to our terms of service
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 }
-
-const s = {
-  bg: { minHeight: '100vh', background: '#1e1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, sans-serif" },
-  card: { background: '#181825', border: '1px solid #313244', borderRadius: 20, padding: '40px 36px', width: '100%', maxWidth: 400, boxShadow: '0 25px 50px rgba(0,0,0,0.5)' },
-  logoWrap: { display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 },
-  logoEmoji: { fontSize: 52 },
-  title: { margin: 0, fontSize: 28, fontWeight: 800, color: '#cdd6f4', letterSpacing: '-0.5px' },
-  subtitle: { margin: '2px 0 0', fontSize: 13, color: '#6c7086' },
-  tabs: { display: 'flex', background: '#11111b', borderRadius: 10, padding: 4, marginBottom: 24, gap: 4 },
-  tab: { flex: 1, border: 'none', background: 'transparent', padding: '9px 0', borderRadius: 7, cursor: 'pointer', fontWeight: 600, color: '#6c7086', fontSize: 14, transition: 'all 0.2s' },
-  tabActive: { background: '#313244', color: '#cdd6f4' },
-  form: { display: 'flex', flexDirection: 'column', gap: 12 },
-  inputWrap: { display: 'flex', alignItems: 'center', background: '#11111b', border: '1px solid #313244', borderRadius: 10, padding: '0 14px', gap: 10 },
-  inputIcon: { fontSize: 16 },
-  input: { flex: 1, border: 'none', background: 'transparent', padding: '13px 0', fontSize: 14, color: '#cdd6f4', outline: 'none', fontFamily: 'inherit' },
-  btn: { background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', color: '#fff', border: 'none', borderRadius: 10, padding: '14px', fontWeight: 700, fontSize: 15, cursor: 'pointer', marginTop: 8, fontFamily: 'inherit' },
-  langs: { textAlign: 'center', marginTop: 24, fontSize: 18, letterSpacing: 2 },
-};
