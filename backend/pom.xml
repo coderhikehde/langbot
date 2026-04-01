@@ -16,7 +16,7 @@
     <artifactId>langbot</artifactId>
     <version>1.0.0</version>
     <name>langbot</name>
-    <description>LangBot Backend</description>
+    <description>LangBot Backend with Groq AI</description>
     
     <properties>
         <java.version>17</java.version>
