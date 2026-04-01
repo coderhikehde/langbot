@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ConversationRepository extends JpaRepository<Conversation, String> {
+public interface ConversationRepository extends JpaRepository<Conversation, Long> {
     List<Conversation> findByUserIdOrderByUpdatedAtDesc(String userId);
 }

@@ -1,7 +1,7 @@
 package com.chatbot.model;
 
 import jakarta.persistence.*;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "messages")
@@ -12,20 +12,17 @@ public class Message {
     
     private String content;
     private String role;
-    private Date createdAt;
+    private LocalDateTime createdAt;
     
-    public enum Role {
-        USER, ASSISTANT, SYSTEM
+    @ManyToOne
+    @JoinColumn(name = "conversation_id")
+    private Conversation conversation;
+    
+    public Message() {
+        this.createdAt = LocalDateTime.now();
     }
     
-    public Message() {}
-    
-    public Message(String content, String role) {
-        this.content = content;
-        this.role = role;
-        this.createdAt = new Date();
-    }
-    
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
@@ -35,6 +32,9 @@ public class Message {
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
     
-    public Date getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public Conversation getConversation() { return conversation; }
+    public void setConversation(Conversation conversation) { this.conversation = conversation; }
 }

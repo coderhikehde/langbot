@@ -1,7 +1,8 @@
 package com.chatbot.model;
 
 import jakarta.persistence.*;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -13,19 +14,18 @@ public class Conversation {
     
     private String userId;
     private String title;
-    private Date createdAt;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL)
-    private List<Message> messages;
+    private List<Message> messages = new ArrayList<>();
     
-    public Conversation() {}
-    
-    public Conversation(String userId, String title) {
-        this.userId = userId;
-        this.title = title;
-        this.createdAt = new Date();
+    public Conversation() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
     
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
@@ -35,8 +35,11 @@ public class Conversation {
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     
-    public Date getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     
     public List<Message> getMessages() { return messages; }
     public void setMessages(List<Message> messages) { this.messages = messages; }
