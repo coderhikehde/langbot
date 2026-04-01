@@ -1,8 +1,7 @@
 package com.chatbot.controller;
 
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api")
@@ -12,13 +11,14 @@ public class SimpleController {
     public Map<String, String> health() {
         Map<String, String> response = new HashMap<>();
         response.put("status", "OK");
+        response.put("message", "LangBot Running");
         return response;
     }
     
     @PostMapping("/register")
     public Map<String, String> register(@RequestBody Map<String, String> user) {
         Map<String, String> response = new HashMap<>();
-        response.put("message", "User " + user.get("username") + " created");
+        response.put("message", "User " + user.get("username") + " registered");
         response.put("status", "success");
         return response;
     }
