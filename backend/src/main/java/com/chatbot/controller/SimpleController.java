@@ -5,6 +5,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "https://langbot-six.vercel.app", allowCredentials = "true", allowedHeaders = "*")
 public class SimpleController {
     
     @GetMapping("/health")
