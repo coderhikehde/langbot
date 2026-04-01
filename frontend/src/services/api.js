@@ -9,50 +9,31 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 export const authApi = {
-  login: (username, password) =>
-    api.post('/login', { username, password }),
-  register: (username, email, password) =>
-    api.post('/register', { username, email, password }),
+  login: (username, password) => api.post('/login', { username, password }),
+  register: (username, email, password) => api.post('/register', { username, email, password }),
 };
 
 export const chatApi = {
-  sendMessage: (message, conversationId) =>
-    api.post('/chat', { message, conversationId }),
-  getConversations: () =>
-    api.get('/conversations'),
-  getConversation: (id) =>
-    api.get(`/conversations/${id}`),
-  deleteConversation: (id) =>
-    api.delete(`/conversations/${id}`),
+  sendMessage: (message, conversationId) => api.post('/chat', { message }),
+  getConversations: () => api.get('/chat/conversations'),
+  getConversation: (id) => api.get(`/chat/conversations/${id}`),
+  deleteConversation: (id) => api.delete(`/chat/conversations/${id}`),
 };
 
 export const userApi = {
-  getProfile: () => api.get('/profile'),
-  updateProfile: (data) => api.put('/profile', data),
-  getStats: () => api.get('/stats'),
+  getProfile: () => api.get('/user/profile'),
+  updateProfile: (data) => api.put('/user/profile', data),
+  getStats: () => api.get('/user/stats'),
 };
 
 export default api;
