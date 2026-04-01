@@ -1,40 +1,32 @@
 package com.chatbot.controller;
 
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
 public class SimpleController {
     
     @GetMapping("/health")
-    public Map<String, Object> health() {
-        Map<String, Object> response = new HashMap<>();
+    public Map<String, String> health() {
+        Map<String, String> response = new HashMap<>();
         response.put("status", "OK");
-        response.put("message", "LangBot Running");
-        return response;
-    }
-    
-    @PostMapping("/chat")
-    public Map<String, Object> chat(@RequestBody Map<String, String> request) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("reply", "Hello! You said: " + request.get("message"));
         return response;
     }
     
     @PostMapping("/register")
-    public Map<String, Object> register(@RequestBody Map<String, String> user) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "User registered: " + user.get("username"));
+    public Map<String, String> register(@RequestBody Map<String, String> user) {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "User " + user.get("username") + " created");
         response.put("status", "success");
         return response;
     }
     
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody Map<String, String> creds) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Login successful");
-        response.put("token", "dummy-token");
+    public Map<String, String> login(@RequestBody Map<String, String> creds) {
+        Map<String, String> response = new HashMap<>();
+        response.put("token", "fake-jwt-token");
         response.put("status", "success");
         return response;
     }
