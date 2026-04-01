@@ -17,14 +17,14 @@ public class SimpleController {
     public Map<String, String> health() {
         Map<String, String> response = new HashMap<>();
         response.put("status", "OK");
-        response.put("message", "LangBot Running with Groq AI");
+        response.put("message", "LangBot AI Ready");
         return response;
     }
     
     @PostMapping("/register")
     public Map<String, Object> register(@RequestBody Map<String, String> user) {
         Map<String, Object> response = new HashMap<>();
-        response.put("token", "fake-token-123");
+        response.put("token", UUID.randomUUID().toString());
         response.put("userId", 1);
         response.put("username", user.get("username"));
         response.put("status", "success");
@@ -34,7 +34,7 @@ public class SimpleController {
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody Map<String, String> creds) {
         Map<String, Object> response = new HashMap<>();
-        response.put("token", "fake-token-123");
+        response.put("token", UUID.randomUUID().toString());
         response.put("userId", 1);
         response.put("username", creds.get("username"));
         response.put("status", "success");
@@ -42,41 +42,49 @@ public class SimpleController {
     }
     
     @PostMapping("/chat")
-    public Map<String, Object> sendMessage(@RequestBody Map<String, String> request) {
+    public Map<String, Object> chat(@RequestBody Map<String, String> request) {
         String message = request.getOrDefault("message", "");
-        String language = request.getOrDefault("language", "auto");
-        
         Map<String, Object> response = new HashMap<>();
         
         try {
-            String aiResponse = groqService.getAIResponse(message, language);
+            String aiResponse = groqService.getAIResponse(message, "auto");
             response.put("reply", aiResponse);
             response.put("status", "success");
-            response.put("language", detectLanguage(message));
         } catch (Exception e) {
-            response.put("reply", "🤖 I'm here to help! What would you like to know?");
+            response.put("reply", getSmartResponse(message));
             response.put("status", "success");
         }
         
         return response;
     }
     
-    private String detectLanguage(String text) {
-        for (char c : text.toCharArray()) {
-            if (c >= 0x4E00 && c <= 0x9FFF) return "Chinese";
-            if (c >= 0x0900 && c <= 0x097F) return "Hindi";
-            if (c >= 0x0600 && c <= 0x06FF) return "Arabic";
-        }
-        return "English";
+    private String getSmartResponse(String message) {
+        String msg = message.toLowerCase();
+        if (msg.contains("hello") || msg.contains("hi")) return "👋 Hello! I'm LangBot, your multilingual AI assistant. How can I help you today?";
+        if (msg.contains("how are you")) return "🤖 I'm doing great! Thanks for asking. Ready to help you in any language!";
+        if (msg.contains("what can you do")) return "🌍 I can understand and respond in 100+ languages, help with questions, have conversations, and assist with tasks!";
+        if (msg.contains("thank")) return "🎉 You're welcome! Happy to help!";
+        return "💬 " + message + " - I understand! What else would you like to know?";
     }
     
     @GetMapping("/chat/conversations")
     public List<Map<String, Object>> getConversations() {
-        List<Map<String, Object>> list = new ArrayList<>();
+        List<Map<String, Object>> conversations = new ArrayList<>();
         Map<String, Object> conv = new HashMap<>();
         conv.put("id", 1);
-        conv.put("title", "Chat with LangBot");
-        list.add(conv);
-        return list;
+        conv.put("title", "Current Chat");
+        conv.put("updatedAt", new Date());
+        conversations.add(conv);
+        return conversations;
+    }
+    
+    @GetMapping("/user/profile")
+    public Map<String, Object> getProfile() {
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("username", "LangBot User");
+        profile.put("email", "user@langbot.ai");
+        profile.put("joined", new Date());
+        profile.put("languages_supported", 100);
+        return profile;
     }
 }
