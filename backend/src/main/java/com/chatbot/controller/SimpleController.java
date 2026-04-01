@@ -16,17 +16,21 @@ public class SimpleController {
     }
     
     @PostMapping("/register")
-    public Map<String, String> register(@RequestBody Map<String, String> user) {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "User " + user.get("username") + " registered");
+    public Map<String, Object> register(@RequestBody Map<String, String> user) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", "fake-jwt-token-123");
+        response.put("userId", 1);
+        response.put("username", user.get("username"));
         response.put("status", "success");
         return response;
     }
     
     @PostMapping("/login")
-    public Map<String, String> login(@RequestBody Map<String, String> creds) {
-        Map<String, String> response = new HashMap<>();
-        response.put("token", "fake-jwt-token");
+    public Map<String, Object> login(@RequestBody Map<String, String> creds) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", "fake-jwt-token-123");
+        response.put("userId", 1);
+        response.put("username", creds.get("username"));
         response.put("status", "success");
         return response;
     }
