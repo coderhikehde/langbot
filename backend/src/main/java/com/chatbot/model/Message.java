@@ -1,49 +1,40 @@
 package com.chatbot.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "messages")
-@Data
-@NoArgsConstructor
 public class Message {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "conversation_id", nullable = false)
-    private Conversation conversation;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Role role;
-
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
     private String content;
-
-    @Column(columnDefinition = "TEXT")
-    private String embeddingJson;
-
-    @Column(columnDefinition = "TEXT")
-    private String detectedLanguage;
-
-    @Column(columnDefinition = "TEXT")
-    private String detectedIntent;
-
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-    }
-
+    private String role;
+    private Date createdAt;
+    
     public enum Role {
-        USER, ASSISTANT
+        USER, ASSISTANT, SYSTEM
     }
+    
+    public Message() {}
+    
+    public Message(String content, String role) {
+        this.content = content;
+        this.role = role;
+        this.createdAt = new Date();
+    }
+    
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
+    
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+    
+    public Date getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
 }

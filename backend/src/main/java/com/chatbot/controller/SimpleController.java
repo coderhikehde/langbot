@@ -5,15 +5,25 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "https://langbot-six.vercel.app")
-public class ChatController {
+@CrossOrigin(origins = "*")
+public class SimpleController {
     
     @GetMapping("/health")
     public Map<String, Object> health() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "OK");
         response.put("message", "LangBot Backend Running");
+        response.put("database", "Connected to PostgreSQL");
         response.put("timestamp", System.currentTimeMillis());
+        return response;
+    }
+    
+    @GetMapping("/test")
+    public Map<String, String> test() {
+        Map<String, String> response = new HashMap<>();
+        response.put("status", "Working");
+        response.put("message", "Backend is running on Railway");
+        response.put("time", new Date().toString());
         return response;
     }
     
@@ -23,9 +33,10 @@ public class ChatController {
         String message = request.getOrDefault("message", "");
         String language = request.getOrDefault("language", "en");
         
-        response.put("reply", "Message received: " + message);
+        response.put("reply", "Hello from LangBot! You said: " + message);
         response.put("language", language);
         response.put("status", "success");
+        response.put("timestamp", System.currentTimeMillis());
         return response;
     }
 }
