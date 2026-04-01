@@ -9,18 +9,15 @@ function PrivateRoute({ children }) {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
-function GuestRoute({ children }) {
-  const { isAuthenticated } = useAuth();
-  return !isAuthenticated ? children : <Navigate to="/chat" replace />;
-}
-
 function AppRoutes() {
+  const { isAuthenticated } = useAuth();
+  
   return (
     <Routes>
-      <Route path="/login" element={<GuestRoute><AuthPage /></GuestRoute>} />
+      <Route path="/login" element={<AuthPage />} />
       <Route path="/chat" element={<PrivateRoute><ChatPage /></PrivateRoute>} />
       <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-      <Route path="/" element={<Navigate to="/chat" replace />} />
+      <Route path="/" element={isAuthenticated ? <Navigate to="/chat" /> : <Navigate to="/login" />} />
     </Routes>
   );
 }
