@@ -18,6 +18,18 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const authApi = {
   login: (username, password) => api.post('/login', { username, password }),
   register: (username, email, password) => api.post('/register', { username, email, password }),
